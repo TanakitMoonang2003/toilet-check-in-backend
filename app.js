@@ -233,6 +233,10 @@ app.post('/logout', (req, res) => {
     });
 });
 
+app.get('/check-status', (req, res) => {
+     res.status(200).json({ message: 'Status Ok' });
+});
+
 // ======================= START SERVER ========================
 app.listen(5000, () => {
     console.log("Server started at http://localhost:5000");
