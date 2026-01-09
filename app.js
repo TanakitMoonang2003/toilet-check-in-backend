@@ -10,7 +10,8 @@ const uuid = require('uuid');
 
 const { uploadImageSingle } = require('./src/middlewares/upload');
 const db = require('./src/configs/db');
-
+const path = require('path');
+const uploadDir = path.join('/tmp', 'images');
 // Passport strategies
 require('./src/configs/facebook');
 require('./src/configs/google');
