@@ -279,7 +279,9 @@ app.get('/', (req, res) => {
 
 // ======================= START SERVER ========================
 const PORT = process.env.PORT;
-app.listen(PORT, () => {
+
+console.log('PORT from Railway:', PORT);
+
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server started on port ${PORT}`);
 });
-
