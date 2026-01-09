@@ -10,7 +10,7 @@ const uuid = require('uuid');
 
 const { uploadImageSingle } = require('./src/middlewares/upload');
 const db = require('./src/configs/db');
-
+app.set('trust proxy', 1)
 // Passport strategies
 require('./src/configs/google');
 
@@ -39,9 +39,9 @@ app.use(session({
     saveUninitialized: false,
     name: 'connect.sid',  // Explicitly set session cookie name
     cookie: {
-        secure: isSecure,  // true for HTTPS (required for sameSite: 'none')
+        secure: true,  // true for HTTPS (required for sameSite: 'none')
         httpOnly: true,
-        sameSite: isSecure ? 'none' : 'lax',  // 'none' for cross-origin with HTTPS, 'lax' for same-site
+        sameSite: 'none',  // 'none' for cross-origin with HTTPS, 'lax' for same-site
         maxAge: 24 * 60 * 60 * 1000,  // 24 hours
         domain: undefined,  // Let browser determine domain
         path: '/',  // Available for all paths
