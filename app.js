@@ -15,6 +15,8 @@ const db = require('./src/configs/db');
 require('./src/configs/facebook');
 require('./src/configs/google');
 
+app.set('trust proxy', 1);
+
 // Middleware setup
 app.use(cors({
     origin: process.env.CLIENT,  // หรือชื่อโดเมน front-end ของคุณ
@@ -24,25 +26,46 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // Session must be before passport.session()
+// Auto-detect environment: use secure cookies for production (HTTPS), insecure for localhost
+const isProduction = process.env.NODE_ENV === 'production';
+const isSecure = process.env.SECURE_COOKIE === 'true' || isProduction;
+
+console.log('Session Configuration:', {
+    isProduction,
+    isSecure,
+    CLIENT: process.env.CLIENT,
+    sameSite: isSecure ? 'none' : 'lax'
+});
+
 app.use(session({
     secret: process.env.SECRET || 'your-default-secret',
     resave: false,
     saveUninitialized: false,
+    name: 'connect.sid',  // Explicitly set session cookie name
     cookie: {
-        secure: false,       // ใน dev ให้ false (ถ้า https ใน production ต้อง true)
+        // secure: isSecure,  // true for HTTPS (required for sameSite: 'none')
+        secure: true,  // Set to false for development on localhost
         httpOnly: true,
-        sameSite: 'lax'
+        // sameSite: isSecure ? 'none' : 'lax',  // 'none' for cross-origin with HTTPS, 'lax' for same-site
+        sameSite: 'none',
+        maxAge: 24 * 60 * 60 * 1000,  // 24 hours
+        domain: undefined,  // Let browser determine domain
+        path: '/',  // Available for all paths
     },
-}));
-
-app.use(require('express-session')({
-    secret: process.env.SECRET,
-    resave: false,
-    saveUninitialized: true
 }));
 
 app.use(passport.initialize());
 app.use(passport.session());
+
+// Debug middleware - log session info for all requests
+app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+    console.log('  Session ID:', req.sessionID);
+    console.log('  Authenticated:', req.isAuthenticated());
+    console.log('  User:', req.user ? `${req.user.name} (${req.user.user_id})` : 'None');
+    console.log('  Cookie:', req.headers.cookie ? 'Present' : 'Missing');
+    next();
+});
 
 // ======================= ROUTES ========================
 
@@ -63,7 +86,7 @@ app.get("/toilet", (req, res) => {
     `;
 
     db.query(query, (err, results) => {
-        if (err) return res.status(500).send({message: "Database error"});
+        if (err) return res.status(500).send({ message: "Database error" });
 
         const features = results.map(row => ({
             type: 'Feature',
@@ -103,7 +126,7 @@ app.get("/toilet/:id", (req, res) => {
     `;
 
     db.query(query, [id], (err, result) => {
-        if (err) return res.status(500).send({message: "Database error"});
+        if (err) return res.status(500).send({ message: "Database error" });
         res.json(result);
     });
 });
@@ -114,8 +137,8 @@ app.post("/report", (req, res) => {
     db.query("INSERT INTO report (report_id, toilet_id, description) VALUES (?, ?, ?)",
         [uuid.v4(), toilet_id, description],
         (err) => {
-            if (err) return res.status(500).send({message: "Insert failed"});
-            res.send({message: "create report success"});
+            if (err) return res.status(500).send({ message: "Insert failed" });
+            res.send({ message: "create report success" });
         });
 });
 
@@ -123,8 +146,8 @@ app.post("/report", (req, res) => {
 app.put("/report", (req, res) => {
     const { toilet_id, description } = req.body;
     db.query("UPDATE report SET description = ? WHERE toilet_id = ?", [description, toilet_id], (err) => {
-        if (err) return res.status(500).send({message: "Update failed"});
-        res.send({message: "update report success"});
+        if (err) return res.status(500).send({ message: "Update failed" });
+        res.send({ message: "update report success" });
     });
 });
 
@@ -132,8 +155,8 @@ app.put("/report", (req, res) => {
 app.delete("/report/:id", (req, res) => {
     const { id } = req.params;
     db.query("DELETE FROM report WHERE toilet_id = ?", [id], (err) => {
-        if (err) return res.status(500).send({message: "Delete failed"});
-        res.send({message: "delete report success"});
+        if (err) return res.status(500).send({ message: "Delete failed" });
+        res.send({ message: "delete report success" });
     });
 });
 
@@ -183,19 +206,40 @@ app.get('/auth/google', passport.authenticate('google', { scope: ['profile'] }))
 app.get('/auth/google/callback',
     passport.authenticate('google', { failureRedirect: '/' }),
     (req, res) => {
-        res.redirect(process.env.CLIENT);
+        console.log('Google callback - User authenticated:', req.user);
+        console.log('Google callback - Session ID:', req.sessionID);
+        console.log('Google callback - Is authenticated:', req.isAuthenticated());
+
+        // Ensure session is saved before redirecting
+        req.session.save((err) => {
+            if (err) {
+                console.error('Session save error:', err);
+                return res.status(500).json({ message: 'Session save failed' });
+            }
+            res.redirect(process.env.CLIENT);
+        });
     }
 );
 
 
 // Facebook Auth Routes
-app.get('/auth/facebook', passport.authenticate('facebook', {scope: ['public_profile']}));
+app.get('/auth/facebook', passport.authenticate('facebook', { scope: ['public_profile'] }));
 
 app.get('/auth/facebook/callback',
     passport.authenticate('facebook', { failureRedirect: '/' }),
     (req, res) => {
-        res.redirect(process.env.CLIENT);
+        console.log('Facebook callback - User authenticated:', req.user);
+        console.log('Facebook callback - Session ID:', req.sessionID);
+        console.log('Facebook callback - Is authenticated:', req.isAuthenticated());
 
+        // Ensure session is saved before redirecting
+        req.session.save((err) => {
+            if (err) {
+                console.error('Session save error:', err);
+                return res.status(500).json({ message: 'Session save failed' });
+            }
+            res.redirect(process.env.CLIENT);
+        });
     }
 );
 
@@ -215,6 +259,12 @@ app.get('/profile', (req, res) => {
 });
 
 app.get('/api/user', (req, res) => {
+    // Debug logging
+    console.log('Session ID:', req.sessionID);
+    console.log('Is Authenticated:', req.isAuthenticated());
+    console.log('User:', req.user);
+    console.log('Session:', req.session);
+
     if (req.isAuthenticated()) {
         res.json(req.user);
     } else {
@@ -234,7 +284,7 @@ app.post('/logout', (req, res) => {
 });
 
 app.get('/check-status', (req, res) => {
-     res.status(200).json({ message: 'Status Ok' });
+    res.status(200).json({ message: 'Status Ok' });
 });
 
 // ======================= START SERVER ========================
