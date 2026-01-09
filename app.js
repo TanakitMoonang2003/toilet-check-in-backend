@@ -253,10 +253,22 @@ app.get('/', (req, res) => {
 });
 
 // ======================= START SERVER ========================
-const PORT = process.env.PORT;
+// ======================= START SERVER ========================
+const PORT = process.env.PORT || 8080;  // เพิ่ม fallback
 
 console.log('PORT from Railway:', PORT);
-
+console.log('Environment:', process.env.NODE_ENV);
+console.log('Client URL:', process.env.CLIENT);
+// ก่อน app.listen
+db.getConnection((err, connection) => {
+    if (err) {
+        console.error('Database connection failed:', err);
+        process.exit(1);
+    }
+    console.log('Database connected successfully');
+    connection.release();
+});
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server started on port ${PORT}`);
+    console.log(`Server is listening on http://0.0.0.0:${PORT}`);
 });
