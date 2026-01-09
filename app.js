@@ -15,6 +15,12 @@ const db = require('./src/configs/db');
 require('./src/configs/facebook');
 require('./src/configs/google');
 
+// Basic request logger for debugging on Railway
+app.use((req, res, next) => {
+    console.log(`[Request] ${req.method} ${req.url}`);
+    next();
+});
+
 // Middleware setup
 app.use(cors({
     origin: process.env.CLIENT,  // หรือชื่อโดเมน front-end ของคุณ
