@@ -12,7 +12,6 @@ const { uploadImageSingle } = require('./src/middlewares/upload');
 const db = require('./src/configs/db');
 
 // Passport strategies
-require('./src/configs/facebook');
 require('./src/configs/google');
 
 // Basic request logger for debugging on Railway
@@ -205,30 +204,6 @@ app.get('/auth/google/callback',
         });
     }
 );
-
-
-// Facebook Auth Routes
-app.get('/auth/facebook', passport.authenticate('facebook', {scope: ['public_profile']}));
-
-app.get('/auth/facebook/callback',
-    passport.authenticate('facebook', { failureRedirect: '/' }),
-    (req, res) => {
-        console.log('Facebook callback - User authenticated:', req.user);
-        console.log('Facebook callback - Session ID:', req.sessionID);
-        console.log('Facebook callback - Is authenticated:', req.isAuthenticated());
-        
-        // Ensure session is saved before redirecting
-        req.session.save((err) => {
-            if (err) {
-                console.error('Session save error:', err);
-                return res.status(500).json({ message: 'Session save failed' });
-            }
-            res.redirect(process.env.CLIENT);
-        });
-    }
-);
-
-
 
 
 // User Profile
