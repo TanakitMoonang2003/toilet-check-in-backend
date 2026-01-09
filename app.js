@@ -70,6 +70,29 @@ app.use((req, res, next) => {
 
 // ======================= ROUTES ========================
 
+// Root route
+app.get('/', (req, res) => {
+    res.status(200).json({
+        status: 'ok',
+        message: 'Backend is running'
+    });
+    res.json({
+        message: 'Toilet Check-in API',
+        status: 'running',
+        version: '1.0.0',
+        endpoints: {
+            toilets: '/toilet',
+            auth: {
+                google: '/auth/google',
+                facebook: '/auth/facebook'
+            },
+            user: '/api/user',
+            profile: '/profile',
+            status: '/check-status'
+        }
+    });
+});
+
 app.use("/images", express.static("./public/images"))
 
 // Get all toilets in GeoJSON format
