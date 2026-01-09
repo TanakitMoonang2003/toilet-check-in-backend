@@ -8,5 +8,14 @@ const db = mysql.createConnection({
     password: process.env.DB_PASS || 'admin',
     database: process.env.DB_NAME ||'toilet'
 })
+pool.getConnection((err, connection) => {
+    if (err) {
+        console.error('❌ Database connection failed:', err.message);
+    } else {
+        console.log('✅ Database connected successfully');
+        connection.release();
+    }
+});
 
+module.exports = pool;
 module.exports = db
